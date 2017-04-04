@@ -56,7 +56,15 @@ Resources:
         Value: !Join [ "-", [ "Ref":"EnvType" , "Ref":"ProjectId" ,"pub-route" ] ]
 
 # Create Private RouteTable
-  PrivateRouteTable:
+  PrivateRouteTableB:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+      Tags:
+      - Key: Name
+        Value: !Join [ "-", [ "Ref":"EnvType" , "Ref":"ProjectId" ,"pri-route" ] ]
+
+  PrivateRouteTableC:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref MyVPC
@@ -96,7 +104,7 @@ Resources:
       SubnetId: !Ref PublicSubnetC
       RouteTableId: !Ref PublicRouteTable
 
-# Create Private Subnet A
+# Create Private Subnet B
   PrivateSubnetB:
     Type: AWS::EC2::Subnet
     Properties:
@@ -110,7 +118,7 @@ Resources:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateSubnetB
-      RouteTableId: !Ref PrivateRouteTable
+      RouteTableId: !Ref PrivateRouteTableB
 
 # Create Private Subnet C
   PrivateSubnetC:
@@ -126,7 +134,7 @@ Resources:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateSubnetC
-      RouteTableId: !Ref PrivateRouteTable
+      RouteTableId: !Ref PrivateRouteTableC
 
 # Create InternetGateway
   myInternetGateway:
@@ -153,7 +161,7 @@ Resources:
       - NatB
     Properties:
       RouteTableId:
-        !Ref PrivateRouteTable
+        !Ref PrivateRouteTableB
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId:
         !Ref NatB
@@ -163,7 +171,7 @@ Resources:
       - NatC
     Properties:
       RouteTableId:
-        !Ref PrivateRouteTable
+        !Ref PrivateRouteTableC
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId:
         !Ref NatC
