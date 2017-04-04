@@ -1,0 +1,212 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:
+  VPC & subnet create
+Parameters:
+  EnvType: 
+    Description: Environment type.
+    Default: dev
+    Type: String
+    AllowedValues: 
+      - dev
+      - mnt
+      - prd
+    ConstraintDescription: must specify dev or mnt or prd.
+  ProjectId: 
+    Description: Project name id.
+    Default: aaa
+    Type: String
+    MinLength: "3"
+    MaxLength: "3"
+    AllowedPattern: "[a-zA-Z0-9]*"
+    ConstraintDescription: must specify Project id.
+
+Resources:
+# Create VPC
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/24
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value: !Join [ "-", [ "Ref":"EnvType" , "Ref":"ProjectId" ,"vpc" ] ]
+
+  # Create EIPs
+  GateWayServerEIP:
+    Type : "AWS::EC2::EIP"
+    Properties:
+      Domain: "vpc"
+  NatBEIP:
+    Type : "AWS::EC2::EIP"
+    Properties:
+      Domain: "vpc"
+  NatCEIP:
+    Type : "AWS::EC2::EIP"
+    Properties:
+      Domain: "vpc"
+# Create Public RouteTable
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+      Tags:
+      - Key: Name
+        Value: !Join [ "-", [ "Ref":"EnvType" , "Ref":"ProjectId" ,"pub-route" ] ]
+
+# Create Private RouteTable
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+      Tags:
+      - Key: Name
+        Value: !Join [ "-", [ "Ref":"EnvType" , "Ref":"ProjectId" ,"pri-route" ] ]
+
+# Create Public Subnet B
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.0.0.0/27
+      AvailabilityZone: "ap-northeast-1b"
+      Tags:
+      - Key: Name
+        Value: !Join [ "-", [ "Ref":"EnvType" , "Ref":"ProjectId" ,"PublicSunetB" ] ]
+  PubSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicRouteTable
+
+# Create Public Subnet C
+  PublicSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.0.0.32/27
+      AvailabilityZone: "ap-northeast-1c"
+      Tags:
+      - Key: Name
+        Value: !Join [ "-", [ "Ref":"EnvType" , "Ref":"ProjectId" ,"PublicSunetC" ] ]
+  PubSubnetCRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetC
+      RouteTableId: !Ref PublicRouteTable
+
+# Create Private Subnet A
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.0.0.64/27
+      AvailabilityZone: "ap-northeast-1b"
+      Tags:
+      - Key: Name
+        Value: !Join [ "-", [ "Ref":"EnvType" , "Ref":"ProjectId" ,"PrivateSubnetB" ] ]
+  PriSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetB
+      RouteTableId: !Ref PrivateRouteTable
+
+# Create Private Subnet C
+  PrivateSubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.0.0.96/27
+      AvailabilityZone: "ap-northeast-1c"
+      Tags:
+      - Key: Name
+        Value: !Join [ "-", [ "Ref":"EnvType" , "Ref":"ProjectId" ,"PrivateSubnetC" ] ]
+  PriSubnetCRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetC
+      RouteTableId: !Ref PrivateRouteTable
+
+# Create InternetGateway
+  myInternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+    Properties:
+      Tags:
+      - Key: Name
+        Value: !Join [ "-", [ "Ref":"EnvType" , "Ref":"ProjectId" ,"igw" ] ]
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MyVPC
+      InternetGatewayId: !Ref myInternetGateway
+  myRoute:
+    Type: AWS::EC2::Route
+    DependsOn: myInternetGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref myInternetGateway
+  PrivateRouteB:
+    Type: AWS::EC2::Route
+    DependsOn:
+      - NatB
+    Properties:
+      RouteTableId:
+        !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        !Ref NatB
+  PrivateRouteC:
+    Type: AWS::EC2::Route
+    DependsOn:
+      - NatC
+    Properties:
+      RouteTableId:
+        !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        !Ref NatC
+  NatB:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatBEIP.AllocationId
+      SubnetId:
+        !Ref PublicSubnetB
+  NatC:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatCEIP.AllocationId
+      SubnetId:
+        !Ref PublicSubnetC
+
+Outputs:
+  StackVPC:
+    Description: The ID of the VPC
+    Value: !Ref MyVPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPCID"
+
+  StackPubSubnetB:
+    Description: The ID of the VPC Subnet
+    Value: !Ref PublicSubnetB
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnetB"
+
+  StackPubSubnetB:
+    Description: The ID of the VPC Subnet
+    Value: !Ref PublicSubnetC
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnetC"
+
+  StackPriSubnetB:
+    Description: The ID of the VPC Subnet
+    Value: !Ref PrivateSubnetA
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnetB"
+
+  StackPriSubnetB:
+    Description: The ID of the VPC Subnet
+    Value: !Ref PrivateSubnetC
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnetC"
