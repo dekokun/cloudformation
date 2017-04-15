@@ -201,7 +201,7 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-PublicSubnetB"
 
-  StackPubSubnetB:
+  StackPubSubnetC:
     Description: The ID of the VPC Subnet
     Value: !Ref PublicSubnetC
     Export:
@@ -209,11 +209,11 @@ Outputs:
 
   StackPriSubnetB:
     Description: The ID of the VPC Subnet
-    Value: !Ref PrivateSubnetA
+    Value: !Ref PrivateSubnetB
     Export:
       Name: !Sub "${AWS::StackName}-PrivateSubnetB"
 
-  StackPriSubnetB:
+  StackPriSubnetC:
     Description: The ID of the VPC Subnet
     Value: !Ref PrivateSubnetC
     Export:
